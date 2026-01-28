@@ -1,12 +1,36 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { withStallion, sync, useStallionUpdate, useStallionModal } from 'react-native-stallion'
 
-const App = () => {
+const AppComponent = () => {
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const { isRestartRequired, newReleaseBundle } = useStallionUpdate()
+  const { showModal: showStallionModal } = useStallionModal()
 
   const openModal = () => setIsModalVisible(true)
   const closeModal = () => setIsModalVisible(false)
+
+  // Initialize Stallion and check for updates on app start
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        // Sync with Stallion server to check for updates
+        await sync()
+      } catch (error) {
+        console.warn('Stallion sync error:', error)
+      }
+    }
+
+    checkForUpdates()
+  }, [])
+
+  // Show Stallion update modal if restart is required
+  useEffect(() => {
+    if (isRestartRequired && newReleaseBundle) {
+      showStallionModal()
+    }
+  }, [isRestartRequired, newReleaseBundle, showStallionModal])
 
   return (
     <SafeAreaView style={styles.container} testID="app-container">
@@ -56,11 +80,20 @@ const App = () => {
           </View>
         </View>
 
+        {/* Update Status Indicator */}
+        {newReleaseBundle && (
+          <View style={styles.updateBanner} testID="update-banner">
+            <Text style={styles.updateBannerText}>
+              🎉 New update available! Restart to apply.
+            </Text>
+          </View>
+        )}
+
         {/* Action Button */}
         <TouchableOpacity 
           style={styles.button} 
           activeOpacity={0.8}
-         //onPress={openModal}
+          onPress={openModal}
           testID="primary-button"
         >
           <Text style={styles.buttonText}>Get Started</Text>
@@ -143,6 +176,9 @@ const App = () => {
     </SafeAreaView>
   )
 }
+
+// Wrap App with Stallion HOC for OTA updates
+const App = withStallion(AppComponent)
 
 export default App
 
@@ -336,5 +372,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  updateBanner: {
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  updateBannerText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 })
