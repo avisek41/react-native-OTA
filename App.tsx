@@ -1,191 +1,232 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { withStallion, sync, useStallionUpdate, useStallionModal } from 'react-native-stallion'
+import * as React from 'react';
+import {
+  StyleSheet,
+  View,
+  Button,
+  Text,
+  Alert,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
+  useColorScheme,
+  AppState,
+  Modal,
+} from 'react-native';
+import {
+  withStallion,
+  useStallionUpdate,
+  restart,
+  sync,
+} from 'react-native-stallion';
 
-const AppComponent = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const { isRestartRequired, newReleaseBundle } = useStallionUpdate()
-  const { showModal: showStallionModal } = useStallionModal()
+interface StallionEvent {
+  type: string;
+  data?: any;
+  timestamp?: number;
+}
 
-  const openModal = () => setIsModalVisible(true)
-  const closeModal = () => setIsModalVisible(false)
+const UpdateModal: React.FC = () => {
+  const { isRestartRequired } = useStallionUpdate();
+  const [modalVisible, setModalVisible] = React.useState(false);
 
-  // Initialize Stallion and check for updates on app start
-  useEffect(() => {
-    const checkForUpdates = async () => {
-      try {
-        // Sync with Stallion server to check for updates
-        await sync()
-      } catch (error) {
-        console.warn('Stallion sync error:', error)
-      }
+  React.useEffect(() => {
+    if (isRestartRequired) {
+      setModalVisible(true);
     }
+  }, [isRestartRequired]);
 
-    checkForUpdates()
-  }, [])
-
-  // Show Stallion update modal if restart is required
-  useEffect(() => {
-    if (isRestartRequired && newReleaseBundle) {
-      showStallionModal()
-    }
-  }, [isRestartRequired, newReleaseBundle, showStallionModal])
+  const handleRestart = () => {
+    setModalVisible(false);
+    restart(); // Trigger Stallion restart
+  };
 
   return (
-    <SafeAreaView style={styles.container} testID="app-container">
-      <ScrollView 
+    <Modal transparent visible={modalVisible}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#00000088',
+        }}
+      >
+        <View
+          style={{ backgroundColor: '#fff', padding: 20, borderRadius: 10 }}
+        >
+          <Text style={{ marginBottom: 10 }}>
+            A new update is ready to install.
+          </Text>
+          <Button title="Restart App" onPress={handleRestart} />
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const App: React.FC = () => {
+  const isDarkMode = useColorScheme() === 'dark';
+  const { isRestartRequired, newReleaseBundle } = useStallionUpdate();
+  const [events, setEvents] = React.useState<StallionEvent[]>([]);
+
+
+  // Add event to logs
+  const addEvent = React.useCallback((type: string, data?: any) => {
+    setEvents((prev) => [
+      {
+        type,
+        data,
+        timestamp: Date.now(),
+      },
+      ...prev.slice(0, 19), // Keep last 20 events
+    ]);
+  }, []);
+
+  // Handle restart required
+  React.useEffect(() => {
+    if (isRestartRequired) {
+      addEvent('RESTART_REQUIRED', newReleaseBundle);
+      Alert.alert(
+        'New Release Installed',
+        `A new update has been downloaded and is ready to install.\n\nRelease: ${newReleaseBundle?.version || 'Unknown'}\nNote: ${newReleaseBundle?.releaseNote || 'No release notes'}`,
+        [
+          {
+            text: 'Later',
+            style: 'cancel',
+          },
+          {
+            text: 'Restart Now',
+            onPress: () => {
+              addEvent('RESTART_TRIGGERED');
+              restart();
+            },
+          },
+        ],
+      );
+    }
+  }, [isRestartRequired, newReleaseBundle, addEvent]);
+
+
+
+  // Check for updates when app comes to foreground
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log('📱 App came to foreground, checking for updates...');
+        addEvent('APP_FOREGROUND', { state: nextAppState });
+        sync();
+      }
+    });
+
+    // Initial sync on mount
+    console.log('🚀 App mounted, checking for updates...');
+    addEvent('APP_MOUNTED');
+    sync();
+
+    return () => {
+      subscription.remove();
+    };
+  }, [addEvent]);
+
+
+  return (
+    <SafeAreaView style={styles.container} testID="otaTestContainer">
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        testID="app-scroll-view"
+        testID="otaTestScrollView"
       >
         {/* Header Section */}
-        <View style={styles.header} testID="header-section">
-          <Text style={styles.title} testID="app-title">Welcome</Text>
-          <Text style={styles.subtitle} testID="app-subtitle">
-            React Native OTA
+        <View style={styles.header}>
+          <View style={styles.headerIconContainer}>
+            <Text style={styles.headerIcon}>🚀</Text>
+          </View>
+          <Text style={styles.headerTitle}>OTA Update</Text>
+          <Text style={styles.headerSubtitle}>
+            React Native Over-The-Air Updates
           </Text>
         </View>
 
-        {/* Card Section */}
-        <View style={styles.cardContainer} testID="card-container">
-          <View style={styles.card} testID="card-1">
-            <View style={styles.cardIcon}>
-              <Text style={styles.cardIconText}>🚀</Text>
+        {/* Feature Cards */}
+        <View style={styles.cardsContainer}>
+          <View style={styles.card}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>⚡</Text>
             </View>
             <Text style={styles.cardTitle}>Fast Updates</Text>
             <Text style={styles.cardDescription}>
-              Over-the-air updates for instant app improvements
+              Get instant updates without app store approval
             </Text>
           </View>
 
-          <View style={styles.card} testID="card-2">
-            <View style={styles.cardIcon}>
-              <Text style={styles.cardIconText}>⚡</Text>
-            </View>
-            <Text style={styles.cardTitle}>Performance</Text>
-            <Text style={styles.cardDescription}>
-              Optimized for speed and efficiency
-            </Text>
-          </View>
-
-          <View style={styles.card} testID="card-3">
-            <View style={styles.cardIcon}>
-              <Text style={styles.cardIconText}>🔒</Text>
+          <View style={styles.card}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>🔒</Text>
             </View>
             <Text style={styles.cardTitle}>Secure</Text>
             <Text style={styles.cardDescription}>
               Built with security and reliability in mind
             </Text>
           </View>
-        </View>
 
-        {/* Update Status Indicator */}
-        {newReleaseBundle && (
-          <View style={styles.updateBanner} testID="update-banner">
-            <Text style={styles.updateBannerText}>
-              🎉 New update available! Restart to apply.
+          <View style={styles.card}>
+            <View style={styles.cardIconContainer}>
+              <Text style={styles.cardIcon}>📊</Text>
+            </View>
+            <Text style={styles.cardTitle}>Analytics</Text>
+            <Text style={styles.cardDescription}>
+              Track update success and user engagement
             </Text>
           </View>
-        )}
+        </View>
 
-        {/* Action Button */}
-        <TouchableOpacity 
-          style={styles.button} 
-          activeOpacity={0.8}
-          onPress={openModal}
-          testID="primary-button"
-        >
-          <Text style={styles.buttonText}>Get Started</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Beautiful Modal */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={closeModal}
-        testID="welcome-modal"
-      >
-        <Pressable 
-          style={styles.modalOverlay} 
-          onPress={closeModal}
-          testID="modal-overlay"
-        >
-          <Pressable 
-            style={styles.modalContent}
-            onPress={(e) => e.stopPropagation()}
-            testID="modal-content"
-          >
-            <View style={styles.modalHeader} testID="modal-header">
-              <View style={styles.modalIconContainer}>
-                <Text style={styles.modalIcon}>✨</Text>
-              </View>
-              <Text style={styles.modalTitle}>Welcome Aboard!</Text>
-              <Text style={styles.modalSubtitle}>
-                You're all set to get started with React Native OTA
+        {/* Info Section */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>How It Works</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoNumber}>1</Text>
+              <Text style={styles.infoText}>
+                Developer publishes update to Stallion
               </Text>
             </View>
-
-            <View style={styles.modalBody} testID="modal-body">
-              <View style={styles.modalFeature}>
-                <Text style={styles.modalFeatureIcon}>📱</Text>
-                <View style={styles.modalFeatureText}>
-                  <Text style={styles.modalFeatureTitle}>Easy Setup</Text>
-                  <Text style={styles.modalFeatureDesc}>
-                    Get up and running in minutes
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.modalFeature}>
-                <Text style={styles.modalFeatureIcon}>🔄</Text>
-                <View style={styles.modalFeatureText}>
-                  <Text style={styles.modalFeatureTitle}>OTA Updates</Text>
-                  <Text style={styles.modalFeatureDesc}>
-                    Push updates without app store approval
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.modalFeature}>
-                <Text style={styles.modalFeatureIcon}>📊</Text>
-                <View style={styles.modalFeatureText}>
-                  <Text style={styles.modalFeatureTitle}>Analytics</Text>
-                  <Text style={styles.modalFeatureDesc}>
-                    Track update success and user engagement
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoNumber}>2</Text>
+              <Text style={styles.infoText}>
+                App automatically checks for updates
+              </Text>
             </View>
-
-            <View style={styles.modalFooter} testID="modal-footer">
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={closeModal}
-                activeOpacity={0.8}
-                testID="modal-close-button"
-              >
-                <Text style={styles.modalButtonText}>Continue</Text>
-              </TouchableOpacity>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoNumber}>3</Text>
+              <Text style={styles.infoText}>
+                Update downloads in the background
+              </Text>
             </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoNumber}>4</Text>
+              <Text style={styles.infoText}>
+                User restarts to apply the update
+              </Text>
+            </View>
+          </View>
+        </View>
+
+   
+      </ScrollView>
+      <UpdateModal />
     </SafeAreaView>
-  )
-}
+  );
+};
 
-// Wrap App with Stallion HOC for OTA updates
-const App = withStallion(AppComponent)
-
-export default App
+export default withStallion(App);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     padding: 20,
@@ -196,19 +237,36 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     alignItems: 'center',
   },
-  title: {
-    fontSize: 36,
+  headerIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  headerIcon: {
+    fontSize: 40,
+  },
+  headerTitle: {
+    fontSize: 32,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 18,
+  headerSubtitle: {
+    fontSize: 16,
     color: '#6B7280',
-    fontWeight: '400',
+    textAlign: 'center',
   },
-  cardContainer: {
+  cardsContainer: {
     gap: 16,
     marginBottom: 32,
   },
@@ -217,15 +275,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
-  cardIcon: {
+  cardIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -234,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  cardIconText: {
+  cardIcon: {
     fontSize: 28,
   },
   cardTitle: {
@@ -248,142 +303,162 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
   },
-  button: {
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 32,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 20,
-  },
-  modalHeader: {
-    alignItems: 'center',
+  infoSection: {
     marginBottom: 32,
   },
-  modalIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F0F4FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalIcon: {
-    fontSize: 40,
-  },
-  modalTitle: {
-    fontSize: 28,
+  infoTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 12,
-    textAlign: 'center',
+    marginBottom: 16,
   },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 8,
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  modalBody: {
-    marginBottom: 32,
-    gap: 20,
-  },
-  modalFeature: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
+    marginBottom: 16,
   },
-  modalFeatureIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  modalFeatureText: {
-    flex: 1,
-  },
-  modalFeatureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  modalFeatureDesc: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  modalFooter: {
-    paddingTop: 8,
-  },
-  modalButton: {
+  infoNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 32,
+    marginRight: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#374151',
+    lineHeight: 22,
+    paddingTop: 4,
+  },
+  statusBanner: {
+    backgroundColor: '#10B981',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  modalButtonText: {
+  statusBannerIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  statusBannerText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
-  updateBanner: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  updateBannerText: {
-    color: '#FFFFFF',
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  statusCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  statusLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  statusValue: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    textAlign: 'right',
   },
-})
+  statusValueActive: {
+    color: '#4CAF50',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  buttonContainer: {
+    flex: 1,
+    marginBottom: 12,
+  },
+  logsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyLogs: {
+    textAlign: 'center',
+    color: '#999',
+    padding: 20,
+  },
+  logEntry: {
+    padding: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  logType: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2196F3',
+    marginBottom: 4,
+  },
+  logData: {
+    fontSize: 11,
+    color: '#666',
+    fontFamily: 'monospace',
+    marginBottom: 4,
+  },
+  logTimestamp: {
+    fontSize: 10,
+    color: '#999',
+  },
+});

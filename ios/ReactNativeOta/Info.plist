@@ -37,6 +37,11 @@
 	<string></string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<!-- Stallion OTA Configuration -->
+	<key>StallionProjectId</key>
+	<string>6979abc9398fbe18cdf25772</string>
+	<key>StallionAppToken</key>
+	<string>spb_Z3j9x-uB_YTTmr0S8mu1wQRbIOkKZEf6FCWyd_miUT</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
