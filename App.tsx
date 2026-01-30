@@ -18,6 +18,7 @@ import {
   restart,
   sync,
 } from 'react-native-stallion';
+import UpdateModal from './components/UpdateModal';
 
 interface StallionEvent {
   type: string;
@@ -25,43 +26,6 @@ interface StallionEvent {
   timestamp?: number;
 }
 
-const UpdateModal: React.FC = () => {
-  const { isRestartRequired } = useStallionUpdate();
-  const [modalVisible, setModalVisible] = React.useState(false);
-
-  React.useEffect(() => {
-    if (isRestartRequired) {
-      setModalVisible(true);
-    }
-  }, [isRestartRequired]);
-
-  const handleRestart = () => {
-    setModalVisible(false);
-    restart(); // Trigger Stallion restart
-  };
-
-  return (
-    <Modal transparent visible={modalVisible}>
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#00000088',
-        }}
-      >
-        <View
-          style={{ backgroundColor: '#fff', padding: 20, borderRadius: 10 }}
-        >
-          <Text style={{ marginBottom: 10 }}>
-            A new update is ready to install.
-          </Text>
-          <Button title="Restart App" onPress={handleRestart} />
-        </View>
-      </View>
-    </Modal>
-  );
-};
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
