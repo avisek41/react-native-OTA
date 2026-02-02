@@ -95,6 +95,9 @@ const App: React.FC = () => {
   // eas cli token 
 
 
+  // SrAJKbk946gQJlhBa3bV43OZHPdkGed7NGrhim_J
+  // git ci/cd token
+
   return (
     <SafeAreaView style={styles.container} testID="otaTestContainer">
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
