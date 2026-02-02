@@ -1,0 +1,10 @@
+# EAS Workflow Configuration
+# This file documents the EAS build workflow setup
+# Actual CI/CD workflows are in .github/workflows/
+
+# For React Native CLI projects using EAS Build:
+# - Stage builds: Triggered on push to 'stage' branch → Builds Android APK
+# - Production builds: Triggered on push to 'main' branch → Builds Android AAB
+#
+# See .github/workflows/eas-build-stage.yml for the actual GitHub Actions workflow
+

@@ -91,6 +91,9 @@ const App: React.FC = () => {
     };
   }, [addEvent]);
 
+  // jvMv4b5RftjzY06-aGmxXo0h4MWU5IeSLoTzuZos
+  // eas cli token 
+
 
   return (
     <SafeAreaView style={styles.container} testID="otaTestContainer">

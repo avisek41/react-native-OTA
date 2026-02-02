@@ -1,4 +1,11 @@
 {
-  "name": "ReactNativeOta",
-  "displayName": "ReactNativeOta"
+  "expo": {
+    "name": "ReactNativeOta",
+    "slug": "ota-demo",
+    "extra": {
+      "eas": {
+        "projectId": "4520e571-4b2b-45fc-84c7-65dc56795290"
+      }
+    }
+  }
 }
