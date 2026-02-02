@@ -428,5 +428,6 @@ const styles = StyleSheet.create({
   logTimestamp: {
     fontSize: 10,
     color: '#999',
+    // remove the timestamp
   },
 });
