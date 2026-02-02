@@ -9,6 +9,7 @@ import {
   StatusBar,
   useColorScheme,
   AppState,
+  Button
 } from 'react-native';
 import {
   withStallion,
