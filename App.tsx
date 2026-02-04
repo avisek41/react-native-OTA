@@ -8,94 +8,44 @@ import {
   SafeAreaView,
   StatusBar,
   useColorScheme,
-  AppState,
-  Button
 } from 'react-native';
 import {
   withStallion,
   useStallionUpdate,
   restart,
-  sync,
 } from 'react-native-stallion';
-import UpdateModal from './components/UpdateModal';
 
-interface StallionEvent {
-  type: string;
-  data?: any;
-  timestamp?: number;
-}
 
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const { isRestartRequired, newReleaseBundle } = useStallionUpdate();
-  const [events, setEvents] = React.useState<StallionEvent[]>([]);
 
 
-  // Add event to logs
-  const addEvent = React.useCallback((type: string, data?: any) => {
-    setEvents((prev) => [
-      {
-        type,
-        data,
-        timestamp: Date.now(),
-      },
-      ...prev.slice(0, 19), // Keep last 20 events
-    ]);
-  }, []);
-
-  // Handle restart required
+// Handle restart required
   React.useEffect(() => {
     if (isRestartRequired) {
-      addEvent('RESTART_REQUIRED', newReleaseBundle);
+
       Alert.alert(
         'New Release Installed',
         `A new update has been downloaded and is ready to install.\n\nRelease: ${newReleaseBundle?.version || 'Unknown'}\nNote: ${newReleaseBundle?.releaseNote || 'No release notes'}`,
         [
-          {
-            text: 'Later',
-            style: 'cancel',
-          },
+          
           {
             text: 'Restart Now',
             onPress: () => {
-              addEvent('RESTART_TRIGGERED');
+
               restart();
             },
           },
         ],
       );
     }
-  }, [isRestartRequired, newReleaseBundle, addEvent]);
+  }, [isRestartRequired, newReleaseBundle]);
 
 
 
-  // Check for updates when app comes to foreground
-  React.useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
-        console.log('📱 App came to foreground, checking for updates...');
-        addEvent('APP_FOREGROUND', { state: nextAppState });
-        sync();
-      }
-    });
 
-    // Initial sync on mount
-    console.log('🚀 App mounted, checking for updates...');
-    addEvent('APP_MOUNTED');
-    sync();
-
-    return () => {
-      subscription.remove();
-    };
-  }, [addEvent]);
-
-  // jvMv4b5RftjzY06-aGmxXo0h4MWU5IeSLoTzuZos
-  // eas cli token 
-
-
-  // SrAJKbk946gQJlhBa3bV43OZHPdkGed7NGrhim_J
-  // git ci/cd token
 
   return (
     <SafeAreaView style={styles.container} testID="otaTestContainer">
@@ -110,7 +60,7 @@ const App: React.FC = () => {
           <View style={styles.headerIconContainer}>
             <Text style={styles.headerIcon}>🚀</Text>
           </View>
-          <Text style={styles.headerTitle}>OTA Update</Text>
+          <Text style={styles.headerTitle}>OTA Update Demo App </Text>
           <Text style={styles.headerSubtitle}>
             React Native Over-The-Air Updates
           </Text>
@@ -182,7 +132,7 @@ const App: React.FC = () => {
 
    
       </ScrollView>
-      <UpdateModal />
+
     </SafeAreaView>
   );
 };

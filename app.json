@@ -1,4 +1,5 @@
 {
+  "name": "ReactNativeOta",
   "expo": {
     "name": "ReactNativeOta",
     "slug": "ota-demo",
